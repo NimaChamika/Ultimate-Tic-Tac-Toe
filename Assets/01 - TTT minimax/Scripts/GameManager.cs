@@ -13,30 +13,29 @@ namespace TTT_MiniMax
 
         #region PROPERTIES
         [SerializeField] private Transform board;
-        private Button[,] btnArray;
-        private Text[,] textArray;
+        private Button[,] boardBtnArray;
+        private Text[,] boardTextArray;
+        [SerializeField] private Text stateText;
 
         private readonly string yourSymbol = "X";
         private readonly string AISymbol = "O";
-        private bool yourTurn;
         #endregion
 
         #region UNITY METHODS
         private void Awake()
         {
-            btnArray = new Button[3, 3];
-            textArray = new Text[3, 3];
+            boardBtnArray = new Button[3, 3];
+            boardTextArray = new Text[3, 3];
 
             for (int i=0;i<board.childCount;i++)
             {
-                btnArray[i / 3, i%3] = board.GetChild(i).GetComponent<Button>();
-                textArray[i / 3, i % 3] = board.GetChild(i).GetChild(0).GetComponent<Text>();
+                boardBtnArray[i / 3, i%3] = board.GetChild(i).GetComponent<Button>();
+                boardTextArray[i / 3, i % 3] = board.GetChild(i).GetChild(0).GetComponent<Text>();
             }
 
             ResetBoard();
 
-
-            yourTurn = true;
+            
         }
         #endregion
 
@@ -46,30 +45,30 @@ namespace TTT_MiniMax
         {
             (int r, int c) cellPos = ( index / 3,index % 3);
 
-            textArray[cellPos.r, cellPos.c].text = yourSymbol;
+            boardTextArray[cellPos.r, cellPos.c].text = yourSymbol;
             DisableAllCells();
 
 
             //CHECK FOR WIN
-            if (!CheckForWin())
+            if (CheckForWin(CopyBoard(boardTextArray),true) == WINSTATE.notfinished)
             {
-                yourTurn = false;
-
                 StartCoroutine(BotMove());
             }           
         }
 
-        private void ResetBoard()
+        public void ResetBoard()
         {
             //ENABLE BTNS,CLEAR TEXTS
             for (int i=0;i<3;i++)
             {
                 for(int j=0;j<3;j++)
                 {
-                    textArray[i, j].text = "";
-                    btnArray[i, j].enabled = true;
+                    boardTextArray[i, j].text = "";
+                    boardBtnArray[i, j].enabled = true;
                 }
             }
+
+            stateText.text = "YOUR TURN";
         }
 
         private void DisableAllCells()
@@ -78,7 +77,7 @@ namespace TTT_MiniMax
             {
                 for (int j = 0; j < 3; j++)
                 {
-                    btnArray[i, j].enabled = false;
+                    boardBtnArray[i, j].enabled = false;
                 }
             }
         }
@@ -89,57 +88,88 @@ namespace TTT_MiniMax
             {
                 for (int j = 0; j < 3; j++)
                 {
-                    if (textArray[i, j].text == "")
+                    if (boardTextArray[i, j].text == "")
                     {
-                        btnArray[i, j].enabled = true;
+                        boardBtnArray[i, j].enabled = true;
                     }
                 }
             }
 
-            yourTurn = true;
+            stateText.text = "YOUR TURN";
         }
 
-        private bool CheckForWin()
+        enum WINSTATE
         {
+            loose = -1,
+            tie = 0,
+            win = 2,
+            notfinished
+        }
+
+
+        private WINSTATE CheckForWin(string[,] textArray,bool realMove)
+        {
+
             //CHECK FOR ROWS
             for (int i = 0; i < 3; i++)
             {
-                if(textArray[i, 0].text != "" && textArray[i,0].text == textArray[i,1].text && textArray[i, 1].text  == textArray[i, 2].text)
+                if (textArray[i, 0] != "" && textArray[i, 0] == textArray[i, 1] && textArray[i, 1] == textArray[i, 2])
                 {
-                    Debug.Log(yourTurn ? "YOU WIN" : "COMPUTER WINS");
-                    ChageTextColorForWin((i,0),(i,1),(i,2));
-                    return true;
-                }
 
+                    
+                    if (realMove)
+                    {
+                        ChageTextColorForWin((i, 0), (i, 1), (i, 2));
+                        Debug.Log(textArray[i, 0] == AISymbol ? "COMPUTER WIN" : "YOU WINS");
+                        stateText.text = textArray[i, 0] == AISymbol ? "COMPUTER WIN" : "YOU WINS";
+                    }
+                    return textArray[i, 0] == AISymbol ? WINSTATE.win : WINSTATE.loose;
+                }
             }
+
 
             //CHECK FOR COLUMNS
             for (int i = 0; i < 3; i++)
             {
-                if (textArray[0, i].text != "" && textArray[0, i].text == textArray[1, i].text && textArray[1, i].text == textArray[2, i].text)
+                if (textArray[0, i] != "" && textArray[0, i] == textArray[1, i] && textArray[1, i] == textArray[2, i])
                 {
-                    Debug.Log(yourTurn ? "YOU WIN" : "COMPUTER WINS");
-                    ChageTextColorForWin((0,i), (1, i), (2, i));
-                    return true;
+                    
+                    if (realMove)
+                    {
+                        ChageTextColorForWin((0, i), (1, i), (2, i));
+                        Debug.Log(textArray[0, i] == AISymbol ? "COMPUTER WINS" : "YOU WIN");
+                        stateText.text = textArray[0, i] == AISymbol ? "COMPUTER WIN" : "YOU WINS";
+                    }
+                    return textArray[0, i] == AISymbol ? WINSTATE.win : WINSTATE.loose;
                 }
 
             }
 
 
             //DIAGONALS
-            if (textArray[0, 0].text != "" && textArray[0, 0].text == textArray[1, 1].text && textArray[1,1].text == textArray[2, 2].text)
+            if (textArray[0, 0] != "" && textArray[0, 0] == textArray[1, 1] && textArray[1,1] == textArray[2, 2])
             {
-                Debug.Log(yourTurn ? "YOU WIN" : "COMPUTER WINS");
-                ChageTextColorForWin((0, 0), (1, 1), (2, 2));
-                return true;
+                
+                if (realMove)
+                {
+                    ChageTextColorForWin((0, 0), (1, 1), (2, 2));
+                    Debug.Log(textArray[0, 0] == AISymbol ? "COMPUTER WINS" : "YOU WIN");
+                    stateText.text = textArray[0, 0] == AISymbol ? "COMPUTER WIN" : "YOU WINS";
+                }
+                return textArray[0, 0] == AISymbol ? WINSTATE.win : WINSTATE.loose;
             }
 
 
-            if (textArray[0, 2].text != "" &&  textArray[0,2].text == textArray[1, 1].text && textArray[1, 1].text == textArray[2, 0].text)
+            if (textArray[0, 2] != "" &&  textArray[0,2] == textArray[1, 1] && textArray[1, 1] == textArray[2, 0])
             {
-                Debug.Log(yourTurn ? "YOU WIN" : "COMPUTER WINS");
-                ChageTextColorForWin((0, 2), (1, 1), (2, 0));
-                return true;
+
+                if (realMove)
+                {
+                    ChageTextColorForWin((0, 2), (1, 1), (2, 0));
+                    Debug.Log(textArray[0, 2] == AISymbol ? "COMPUTER WINS" : "YOU WIN");
+                    stateText.text = textArray[0, 2] == AISymbol ? "COMPUTER WIN" : "YOU WINS";
+                }
+                return textArray[0, 2] == AISymbol ? WINSTATE.win : WINSTATE.loose;
             }
 
             //TIE
@@ -147,22 +177,27 @@ namespace TTT_MiniMax
             {
                 for (int j = 0; j < 3; j++)
                 {
-                    if (textArray[i, j].text == "")
+                    if (textArray[i, j] == "")
                     {
-                        return false;
+                        return  WINSTATE.notfinished;
                     }
                 }
             }
 
-            Debug.Log("TIE");
-            return true;
+            if (realMove)
+            {
+                Debug.Log("TIE");
+                stateText.text = "TIE";
+            }
+            
+            return WINSTATE.tie;
         }
         
         private void ChageTextColorForWin(params (int r,int c)[] posArray)
         {
             foreach(var pos in posArray)
             {
-                textArray[pos.r, pos.c].color = Color.red;
+                boardTextArray[pos.r, pos.c].color = Color.red;
             }
         }
         #endregion
@@ -170,12 +205,14 @@ namespace TTT_MiniMax
         #region BOT METHODS
         private IEnumerator BotMove()
         {
+            stateText.text = "AI TURN";
+
             yield return new WaitForSeconds(1);
 
             GetBotBestMove();
 
-            //CHECK FOR WIN
-            if (!CheckForWin())
+
+            if (CheckForWin(CopyBoard(boardTextArray),true) == WINSTATE.notfinished)
             {
                 EnableEmptyCells();
             }
@@ -185,19 +222,103 @@ namespace TTT_MiniMax
 
         private void GetBotBestMove()
         {
+            //for (int i = 0; i < 3; i++)
+            //{
+            //    for (int j = 0; j < 3; j++)
+            //    {
+            //        if (textArray[i, j].text == "")
+            //        {
+            //            textArray[i, j].text = AISymbol;
+            //            return;
+            //        }
+            //    }
+            //}
+
+            (int r, int c) bestMove = (-1, -1);
+            int bestScore = int.MinValue;
+
             for (int i = 0; i < 3; i++)
             {
                 for (int j = 0; j < 3; j++)
                 {
-                    if (textArray[i, j].text == "")
+                    if (boardTextArray[i, j].text == "")
                     {
-                        textArray[i, j].text = AISymbol;
-                        return;
+
+                        string[,] boardCopy = CopyBoard(boardTextArray);
+                        boardCopy[i,j] = AISymbol;
+
+                        int score = MinMax(boardCopy, 9, false);
+
+                        if (score > bestScore)
+                        {
+                            bestScore = score;
+                            bestMove = (i,j);
+                        }
+
                     }
                 }
             }
+
+            boardTextArray[bestMove.r, bestMove.c].text = AISymbol;
         }
 
+        private int MinMax(string[,] board, int depth, bool isMaximizer)
+        {
+            WINSTATE winState = CheckForWin(board,false);
+
+            //Console.Error.WriteLine(boardState);
+
+            if (winState != WINSTATE.notfinished)
+            {
+                return (int)winState * depth;
+            }
+            else
+            {
+                int maxScore = int.MinValue;
+                int minScore = int.MaxValue;
+
+                for (int i = 0; i < 3; i++)
+                {
+                    for (int j = 0; j < 3; j++)
+                    {
+                        if (board[i, j] == "")
+                        {
+                            string[,] boardCopy = (string[,])board.Clone();
+
+                            if(isMaximizer)
+                            {
+                                boardCopy[i, j] = AISymbol;
+                                maxScore = Math.Max(maxScore, MinMax(boardCopy, depth - 1, false));
+                            }
+                            else
+                            {
+                                boardCopy[i, j] = yourSymbol;
+                                minScore = Math.Min(minScore, MinMax(boardCopy, depth - 1, true));
+                            }
+
+                        }
+                    }
+                }
+
+                return isMaximizer ? maxScore : minScore;
+            }
+
+        }
+        
+        private string[,] CopyBoard(Text[,] orignalBoard)
+        {
+            string[,] boardCopy = new string[3, 3];
+
+            for (int i = 0; i < 3; i++)
+            {
+                for (int j = 0; j < 3; j++)
+                {
+                    boardCopy[i,j] = orignalBoard[i, j].text;
+                }
+            }
+
+            return boardCopy;
+        }
         #endregion
     }
 }

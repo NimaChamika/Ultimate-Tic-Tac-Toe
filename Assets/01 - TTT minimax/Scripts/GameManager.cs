@@ -64,6 +64,7 @@ namespace TTT_MiniMax
                 for(int j=0;j<3;j++)
                 {
                     boardTextArray[i, j].text = "";
+                    boardTextArray[i, j].color = Color.white;
                     boardBtnArray[i, j].enabled = true;
                 }
             }

@@ -3,9 +3,9 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace TTT_MiniMax
+namespace TTT_AlphaBeta
 {
-    public class GameManager : MonoBehaviour
+    public class GameManager_AlphaBeta : MonoBehaviour
     {
         //PLAYER - X
         //AI - O
@@ -33,9 +33,7 @@ namespace TTT_MiniMax
                 boardTextArray[i / 3, i % 3] = board.GetChild(i).GetChild(0).GetComponent<Text>();
             }
 
-            ResetBoard();
-
-            
+            ResetBoard(); 
         }
         #endregion
 
@@ -223,47 +221,37 @@ namespace TTT_MiniMax
 
         private void GetBotBestMove()
         {
-            //for (int i = 0; i < 3; i++)
-            //{
-            //    for (int j = 0; j < 3; j++)
-            //    {
-            //        if (textArray[i, j].text == "")
-            //        {
-            //            textArray[i, j].text = AISymbol;
-            //            return;
-            //        }
-            //    }
-            //}
 
             (int r, int c) bestMove = (-1, -1);
             int bestScore = int.MinValue;
 
-            for (int i = 0; i < 3; i++)
+
+            for (int i = 0; i < 9; i++)
             {
-                for (int j = 0; j < 3; j++)
+                int r = i / 3;
+                int c = i % 3;
+
+                if (boardTextArray[r, c].text == "")
                 {
-                    if (boardTextArray[i, j].text == "")
+
+                    string[,] boardCopy = CopyBoard(boardTextArray);
+                    boardCopy[r, c] = AISymbol;
+
+                    int score = AlphaBetaPrune(boardCopy, 9, false,int.MinValue,int.MaxValue);
+
+                    if (score > bestScore)
                     {
-
-                        string[,] boardCopy = CopyBoard(boardTextArray);
-                        boardCopy[i,j] = AISymbol;
-
-                        int score = MinMax(boardCopy, 9, false);
-
-                        if (score > bestScore)
-                        {
-                            bestScore = score;
-                            bestMove = (i,j);
-                        }
-
+                        bestScore = score;
+                        bestMove = (r, c);
                     }
+
                 }
             }
 
             boardTextArray[bestMove.r, bestMove.c].text = AISymbol;
         }
 
-        private int MinMax(string[,] board, int depth, bool isMaximizer)
+        private int AlphaBetaPrune(string[,] board, int depth, bool isMaximizer,int alpha,int beta)
         {
             WINSTATE winState = CheckForWin(board,false);
 
@@ -278,26 +266,40 @@ namespace TTT_MiniMax
                 int maxScore = int.MinValue;
                 int minScore = int.MaxValue;
 
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 9; i++)
                 {
-                    for (int j = 0; j < 3; j++)
-                    {
-                        if (board[i, j] == "")
-                        {
-                            string[,] boardCopy = (string[,])board.Clone();
+                    int r = i / 3;
+                    int c = i % 3;
 
-                            if(isMaximizer)
+
+                    if (board[r, c] == "")
+                    {
+                        string[,] boardCopy = (string[,])board.Clone();
+
+                        if (isMaximizer)
+                        {
+                            boardCopy[r, c] = AISymbol;
+                            maxScore = Math.Max(maxScore, AlphaBetaPrune(boardCopy, depth - 1, false,alpha,beta));
+
+                            alpha = Math.Max(alpha,maxScore);
+                            if(alpha >= beta)
                             {
-                                boardCopy[i, j] = AISymbol;
-                                maxScore = Math.Max(maxScore, MinMax(boardCopy, depth - 1, false));
+                                break;
                             }
-                            else
+                        }
+                        else
+                        {
+                            boardCopy[r, c] = yourSymbol;
+                            minScore = Math.Min(minScore, AlphaBetaPrune(boardCopy, depth - 1, true,alpha,beta));
+
+                            beta = Math.Min(beta,minScore);
+                            if (alpha >= beta)
                             {
-                                boardCopy[i, j] = yourSymbol;
-                                minScore = Math.Min(minScore, MinMax(boardCopy, depth - 1, true));
+                                break;
                             }
 
                         }
+
                     }
                 }
 

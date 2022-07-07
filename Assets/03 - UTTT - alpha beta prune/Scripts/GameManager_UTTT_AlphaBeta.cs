@@ -1,5 +1,7 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,10 +14,17 @@ namespace UTTT_AlphaBeta
 
 
         #region PROPERTIES
-        [SerializeField] private Transform board;
+        [SerializeField] private Transform mainBoard;
+
+        private List<Button[,]> subBoardBtnList;
+        private List<Text[,]> subBoardTextList;
+
         private Button[,] boardBtnArray;
         private Text[,] boardTextArray;
+
         [SerializeField] private Text stateText;
+
+        private readonly int childCount = 9;
 
         private readonly string yourSymbol = "X";
         private readonly string AISymbol = "O";
@@ -24,73 +33,145 @@ namespace UTTT_AlphaBeta
         #region UNITY METHODS
         private void Awake()
         {
-            boardBtnArray = new Button[3, 3];
-            boardTextArray = new Text[3, 3];
-
-            for (int i=0;i<board.childCount;i++)
-            {
-                boardBtnArray[i / 3, i%3] = board.GetChild(i).GetComponent<Button>();
-                boardTextArray[i / 3, i % 3] = board.GetChild(i).GetChild(0).GetComponent<Text>();
-            }
+            InitBoard();
 
             ResetBoard(); 
         }
         #endregion
 
         #region BOARD METHODS
-        //YOUR BTN CLICK
-        public void CellClick(int index)
+        private void InitBoard()
         {
-            (int r, int c) cellPos = ( index / 3,index % 3);
+            subBoardBtnList = new List<Button[,]>();
+            subBoardTextList = new List<Text[,]>();
 
-            boardTextArray[cellPos.r, cellPos.c].text = yourSymbol;
-            DisableAllCells();
+            boardBtnArray = new Button[3, 3];
+            boardTextArray = new Text[3, 3];
 
-
-            //CHECK FOR WIN
-            if (CheckForWin(CopyBoard(boardTextArray),true) == WINSTATE.notfinished)
+            for (int i = 0; i < childCount; i++)
             {
-                StartCoroutine(BotMove());
-            }           
+                Transform _tempSubBoardT = mainBoard.GetChild(i);
+
+                Button[,] _tempBtnArray = new Button[3, 3];
+                Text[,] _tempTextArray = new Text[3, 3];
+
+                for (int j = 0; j < childCount; j++)
+                {
+                    _tempBtnArray[j / 3, j % 3] = _tempSubBoardT.GetChild(j).GetComponent<Button>();
+                    _tempTextArray[j / 3, j % 3] = _tempSubBoardT.GetChild(j).GetChild(0).GetComponent<Text>();
+                }
+
+                subBoardBtnList.Add(_tempBtnArray);
+                subBoardTextList.Add(_tempTextArray);
+            }
         }
 
-        public void ResetBoard()
+        private void ResetBoard()
         {
             //ENABLE BTNS,CLEAR TEXTS
-            for (int i=0;i<3;i++)
+            for (int i = 0; i < childCount; i++)
             {
-                for(int j=0;j<3;j++)
+                Button[,] _tempBtnArray = subBoardBtnList[i];
+                Text[,] _tempTextArray = subBoardTextList[i];
+
+                for (int j = 0; j < childCount; j++)
                 {
-                    boardTextArray[i, j].text = "";
-                    boardTextArray[i, j].color = Color.white;
-                    boardBtnArray[i, j].enabled = true;
+                    _tempTextArray[j / 3, j % 3].text = "";
+                    _tempTextArray[j / 3, j % 3].color = Color.white;
+                    _tempBtnArray[j / 3, j % 3].enabled = true;
                 }
             }
 
             stateText.text = "YOUR TURN";
         }
 
+        //YOUR BTN CLICK
+        public void CellClick(string pos)
+        {
+            var _pos = pos.Split(' ').Select(int.Parse).ToArray();
+
+            var _value = GetSubBoardPos((_pos[0], _pos[1]));
+
+
+            subBoardTextList[_value.i][_value.r, _value.c].text = yourSymbol;
+            //DisableAllCells();
+
+
+            //CHECK FOR WIN
+            //if (CheckForWin(CopyBoard(boardTextArray), true) == WINSTATE.notfinished)
+            //{
+            //    StartCoroutine(BotMove());
+            //}
+        }
+
+        private static (int i, int r, int c) GetSubBoardPos((int r, int c) pos)
+        {
+            int listIndex = 0;
+            int column = 0;
+            int row = 0;
+
+            if (pos.c <= 2)//0,1,2
+            {
+                listIndex = 0;
+            }
+            else if (pos.c <= 5)//3,4,5
+            {
+                listIndex = 1;
+            }
+            else//6,7,8
+            {
+                listIndex = 2;
+            }
+
+            if (pos.r <= 2)//0,1,2
+            {
+
+            }
+            else if (pos.r <= 5)//3,4,5
+            {
+                listIndex += 3;
+            }
+            else//6,7,8
+            {
+                listIndex += 6;
+            }
+
+            column = pos.c % 3;
+            row = pos.r % 3;
+
+
+            return (listIndex, row, column);
+        }
+
+
         private void DisableAllCells()
         {
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < childCount; i++)
             {
-                for (int j = 0; j < 3; j++)
+                Button[,] _tempBtnArray = subBoardBtnList[i];
+
+
+                for (int j = 0; j < childCount; j++)
                 {
-                    boardBtnArray[i, j].enabled = false;
+                    _tempBtnArray[j / 3, j % 3].enabled = false;
                 }
             }
         }
 
         private void EnableEmptyCells()
         {
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < childCount; i++)
             {
-                for (int j = 0; j < 3; j++)
+                Button[,] _tempBtnArray = subBoardBtnList[i];
+                Text[,] _tempTextArray = subBoardTextList[i];
+
+                for (int j = 0; j < childCount; j++)
                 {
-                    if (boardTextArray[i, j].text == "")
+                    if(_tempTextArray[j / 3, j % 3].text == "") 
                     {
-                        boardBtnArray[i, j].enabled = true;
+                        _tempBtnArray[j / 3, j % 3].enabled = true;
                     }
+                    
                 }
             }
 

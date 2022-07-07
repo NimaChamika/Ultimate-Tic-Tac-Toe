@@ -3,7 +3,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace TTT_AlphaBeta
+namespace UTTT_AlphaBeta
 {
     public class GameManager_UTTT_AlphaBeta : MonoBehaviour
     {

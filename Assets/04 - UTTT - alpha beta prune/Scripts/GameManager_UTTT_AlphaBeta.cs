@@ -19,8 +19,10 @@ namespace UTTT_AlphaBeta
         private List<Button[,]> subBoardBtnList;
         private List<Text[,]> subBoardTextList;
 
-        private Button[,] boardBtnArray;
-        private Text[,] boardTextArray;
+        //private Button[,] boardBtnArray;
+        //private Text[,] boardTextArray;
+
+        private string[,] globalBoardStateArray;
 
         [SerializeField] private Text stateText;
 
@@ -45,8 +47,8 @@ namespace UTTT_AlphaBeta
             subBoardBtnList = new List<Button[,]>();
             subBoardTextList = new List<Text[,]>();
 
-            boardBtnArray = new Button[3, 3];
-            boardTextArray = new Text[3, 3];
+            //boardBtnArray = new Button[3, 3];
+            //boardTextArray = new Text[3, 3];
 
             for (int i = 0; i < childCount; i++)
             {
@@ -68,6 +70,8 @@ namespace UTTT_AlphaBeta
 
         private void ResetBoard()
         {
+            globalBoardStateArray = new string[3, 3];
+
             //ENABLE BTNS,CLEAR TEXTS
             for (int i = 0; i < childCount; i++)
             {
@@ -80,6 +84,8 @@ namespace UTTT_AlphaBeta
                     _tempTextArray[j / 3, j % 3].color = Color.white;
                     _tempBtnArray[j / 3, j % 3].enabled = true;
                 }
+
+                globalBoardStateArray[i / 3, i % 3] = "";
             }
 
             stateText.text = "YOUR TURN";
@@ -90,31 +96,53 @@ namespace UTTT_AlphaBeta
         {
             var _pos = pos.Split(' ').Select(int.Parse).ToArray();
 
-            var _value = GetSubBoardPos((_pos[0], _pos[1]));
+            var _value = GetLocalBoardIndexNPos((_pos[0], _pos[1]));
 
 
             subBoardTextList[_value.i][_value.r, _value.c].text = yourSymbol;
-            //DisableAllCells();
+            DisableAllCells();
 
 
-            //CHECK FOR WIN
-            //if (CheckForWin(CopyBoard(boardTextArray), true) == WINSTATE.notfinished)
+            //if (CheckForWin(CopyBoard(subBoardTextList[_value.i]), true) == WINSTATE.notfinished)
             //{
             //    StartCoroutine(BotMove());
             //}
+
+            //CHECK FOR SUB BOARD WIN
+            WINSTATE _state = CheckForWin(CopyBoard(subBoardTextList[_value.i]), false);
+
+            if(_state != WINSTATE.notfinished)
+            {
+                UpdateMainBoardState(_value.i,_state);
+            }
+
+            if (CheckForWin(globalBoardStateArray, true) == WINSTATE.notfinished)
+            {
+                Debug.Log("Bot MOve");
+
+                int nextPossibleBoardIndex = GetNextPossibleLocalBoardIndex((_pos[0], _pos[1]));
+                List<int> possibleSubBoardTextList = new List<int>();
+
+                if(globalBoardStateArray[nextPossibleBoardIndex/3,nextPossibleBoardIndex%3] == "")
+                {
+                    possibleSubBoardTextList.Add(nextPossibleBoardIndex);
+                }
+
+                StartCoroutine(BotMove(possibleSubBoardTextList));
+            }
         }
 
-        private static (int i, int r, int c) GetSubBoardPos((int r, int c) pos)
+        private static (int i, int r, int c) GetLocalBoardIndexNPos((int r, int c) gloabalPos)
         {
             int listIndex = 0;
             int column = 0;
             int row = 0;
 
-            if (pos.c <= 2)//0,1,2
+            if (gloabalPos.c <= 2)//0,1,2
             {
                 listIndex = 0;
             }
-            else if (pos.c <= 5)//3,4,5
+            else if (gloabalPos.c <= 5)//3,4,5
             {
                 listIndex = 1;
             }
@@ -123,11 +151,11 @@ namespace UTTT_AlphaBeta
                 listIndex = 2;
             }
 
-            if (pos.r <= 2)//0,1,2
+            if (gloabalPos.r <= 2)//0,1,2
             {
 
             }
-            else if (pos.r <= 5)//3,4,5
+            else if (gloabalPos.r <= 5)//3,4,5
             {
                 listIndex += 3;
             }
@@ -136,13 +164,68 @@ namespace UTTT_AlphaBeta
                 listIndex += 6;
             }
 
-            column = pos.c % 3;
-            row = pos.r % 3;
+            column = gloabalPos.c % 3;
+            row = gloabalPos.r % 3;
 
 
             return (listIndex, row, column);
         }
 
+        private static int GetNextPossibleLocalBoardIndex((int r, int c) opponentPos)
+        {
+            var value = GetLocalBoardIndexNPos(opponentPos);
+
+            int boardIndex = 0;
+
+            if (value.r == 0)
+            {
+                boardIndex += value.c;
+            }
+            else if (value.r == 1)
+            {
+                boardIndex = 3;
+                boardIndex += value.c;
+            }
+            else
+            {
+                boardIndex = 6;
+                boardIndex += value.c;
+            }
+
+            return boardIndex;
+        }
+
+        private static (int r,int c) ConvertLocalBoardIndexToGlobalBoardPos((int i, int r, int c) localCellIndex)
+        {
+
+            if (localCellIndex.i <= 2)//0,1,2
+            {
+                //localCellIndex.r = 0;
+            }
+            else if (localCellIndex.i <= 5)//3,4,5
+            {
+                localCellIndex.r += 3;
+            }
+            else//6,7,8
+            {
+                localCellIndex.r += 6;
+            }
+
+            if (localCellIndex.i%3 == 0)//0,1,2
+            {
+                //localCellIndex.c += 3;
+            }
+            else if (localCellIndex.i % 3 == 1)//3,4,5
+            {
+                localCellIndex.c += 3;
+            }
+            else//6,7,8
+            {
+                localCellIndex.c += 6;
+            }
+
+            return (localCellIndex.r, localCellIndex.c);
+        }
 
         private void DisableAllCells()
         {
@@ -158,20 +241,20 @@ namespace UTTT_AlphaBeta
             }
         }
 
-        private void EnableEmptyCells()
+        private void EnableEmptyCells(List<int> possibleLocalBoardIndexList)
         {
-            for (int i = 0; i < childCount; i++)
+            foreach(int index  in possibleLocalBoardIndexList)
             {
-                Button[,] _tempBtnArray = subBoardBtnList[i];
-                Text[,] _tempTextArray = subBoardTextList[i];
+                Button[,] _tempBtnArray = subBoardBtnList[index];
+                Text[,] _tempTextArray = subBoardTextList[index];
 
                 for (int j = 0; j < childCount; j++)
                 {
-                    if(_tempTextArray[j / 3, j % 3].text == "") 
+                    if (_tempTextArray[j / 3, j % 3].text == "")
                     {
                         _tempBtnArray[j / 3, j % 3].enabled = true;
                     }
-                    
+
                 }
             }
 
@@ -186,7 +269,6 @@ namespace UTTT_AlphaBeta
             notfinished
         }
 
-
         private WINSTATE CheckForWin(string[,] textArray,bool realMove)
         {
 
@@ -195,11 +277,9 @@ namespace UTTT_AlphaBeta
             {
                 if (textArray[i, 0] != "" && textArray[i, 0] == textArray[i, 1] && textArray[i, 1] == textArray[i, 2])
                 {
-
-                    
                     if (realMove)
                     {
-                        ChageTextColorForWin((i, 0), (i, 1), (i, 2));
+                        //ChageTextColorForWin((i, 0), (i, 1), (i, 2));
                         Debug.Log(textArray[i, 0] == AISymbol ? "COMPUTER WIN" : "YOU WINS");
                         stateText.text = textArray[i, 0] == AISymbol ? "COMPUTER WIN" : "YOU WINS";
                     }
@@ -216,7 +296,7 @@ namespace UTTT_AlphaBeta
                     
                     if (realMove)
                     {
-                        ChageTextColorForWin((0, i), (1, i), (2, i));
+                        //ChageTextColorForWin((0, i), (1, i), (2, i));
                         Debug.Log(textArray[0, i] == AISymbol ? "COMPUTER WINS" : "YOU WIN");
                         stateText.text = textArray[0, i] == AISymbol ? "COMPUTER WIN" : "YOU WINS";
                     }
@@ -232,7 +312,7 @@ namespace UTTT_AlphaBeta
                 
                 if (realMove)
                 {
-                    ChageTextColorForWin((0, 0), (1, 1), (2, 2));
+                    //ChageTextColorForWin((0, 0), (1, 1), (2, 2));
                     Debug.Log(textArray[0, 0] == AISymbol ? "COMPUTER WINS" : "YOU WIN");
                     stateText.text = textArray[0, 0] == AISymbol ? "COMPUTER WIN" : "YOU WINS";
                 }
@@ -245,7 +325,7 @@ namespace UTTT_AlphaBeta
 
                 if (realMove)
                 {
-                    ChageTextColorForWin((0, 2), (1, 1), (2, 0));
+                    //ChageTextColorForWin((0, 2), (1, 1), (2, 0));
                     Debug.Log(textArray[0, 2] == AISymbol ? "COMPUTER WINS" : "YOU WIN");
                     stateText.text = textArray[0, 2] == AISymbol ? "COMPUTER WIN" : "YOU WINS";
                 }
@@ -275,61 +355,100 @@ namespace UTTT_AlphaBeta
         
         private void ChageTextColorForWin(params (int r,int c)[] posArray)
         {
-            foreach(var pos in posArray)
-            {
-                boardTextArray[pos.r, pos.c].color = Color.red;
-            }
+            //foreach(var pos in posArray)
+            //{
+            //    boardTextArray[pos.r, pos.c].color = Color.red;
+            //}
+        }
+        
+        private void UpdateMainBoardState(int index,WINSTATE winState)
+        {
+            globalBoardStateArray[index / 3, index % 3] = winState == WINSTATE.win ? AISymbol : winState == WINSTATE.loose ? yourSymbol : "";
         }
         #endregion
 
         #region BOT METHODS
-        private IEnumerator BotMove()
+        private IEnumerator BotMove(List<int> possibleSubBoardIndexList)
         {
             stateText.text = "AI TURN";
 
             yield return new WaitForSeconds(1);
 
-            GetBotBestMove();
+            var _bestMove = GetBotBestMove(possibleSubBoardIndexList);//LOCAL POS
 
+            subBoardTextList[_bestMove.i][_bestMove.r, _bestMove.c].text = AISymbol;
 
-            if (CheckForWin(CopyBoard(boardTextArray),true) == WINSTATE.notfinished)
+            //if (CheckForWin(CopyBoard(boardTextArray),true) == WINSTATE.notfinished)
+            //{
+            //    EnableEmptyCells();
+            //}
+
+            //CHECK FOR LOCAL BOARD WIN
+            WINSTATE _state = CheckForWin(CopyBoard(subBoardTextList[_bestMove.i]), false);
+
+            if (_state != WINSTATE.notfinished)
             {
-                EnableEmptyCells();
+                UpdateMainBoardState(_bestMove.i, _state);
             }
- 
+
+            if (CheckForWin(globalBoardStateArray, true) == WINSTATE.notfinished)
+            {
+                Debug.Log("Bot MOve");
+
+                int nextPossibleBoardIndex = GetNextPossibleLocalBoardIndex(ConvertLocalBoardIndexToGlobalBoardPos(_bestMove));
+                Debug.Log(nextPossibleBoardIndex);
+
+                List<int> possibleLocalBoardIndexList = new List<int>();
+
+                if (globalBoardStateArray[nextPossibleBoardIndex / 3, nextPossibleBoardIndex % 3] == "")
+                {
+                    possibleLocalBoardIndexList.Add(nextPossibleBoardIndex);
+                }
+                else
+                {
+
+                }
+
+                EnableEmptyCells(possibleLocalBoardIndexList);
+            }
 
         }
 
-        private void GetBotBestMove()
+        private (int i, int r, int c) GetBotBestMove(List<int> possibleSubBoardIndexList)
         {
 
-            (int r, int c) bestMove = (-1, -1);
+            (int i,int r, int c) bestMove = (-1,-1, -1);
             int bestScore = int.MinValue;
 
-
-            for (int i = 0; i < 9; i++)
+            foreach(var boardIndex in possibleSubBoardIndexList)
             {
-                int r = i / 3;
-                int c = i % 3;
+                Text[,] boardTextArray = subBoardTextList[boardIndex];
 
-                if (boardTextArray[r, c].text == "")
+                for (int i = 0; i < 9; i++)
                 {
+                    int r = i / 3;
+                    int c = i % 3;
 
-                    string[,] boardCopy = CopyBoard(boardTextArray);
-                    boardCopy[r, c] = AISymbol;
-
-                    int score = AlphaBetaPrune(boardCopy, 9, false,int.MinValue,int.MaxValue);
-
-                    if (score > bestScore)
+                    if (boardTextArray[r, c].text == "")
                     {
-                        bestScore = score;
-                        bestMove = (r, c);
-                    }
 
+                        string[,] boardCopy = CopyBoard(boardTextArray);
+                        boardCopy[r, c] = AISymbol;
+
+                        int score = AlphaBetaPrune(boardCopy, 9, false, int.MinValue, int.MaxValue);
+
+                        if (score > bestScore)
+                        {
+                            bestScore = score;
+                            bestMove = (boardIndex,r, c);
+                        }
+
+                    }
                 }
             }
 
-            boardTextArray[bestMove.r, bestMove.c].text = AISymbol;
+            
+            return bestMove;
         }
 
         private int AlphaBetaPrune(string[,] board, int depth, bool isMaximizer,int alpha,int beta)

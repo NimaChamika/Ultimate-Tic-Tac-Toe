@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 namespace TTT_AlphaBeta
 {
-    public class GameManager_UTTT_AlphaBeta : MonoBehaviour
+    public class GameManager_AlphaBeta : MonoBehaviour
     {
         //PLAYER - X
         //AI - O
@@ -101,7 +101,7 @@ namespace TTT_AlphaBeta
         {
             loose = -1,
             tie = 0,
-            win = 2,
+            win = 1,
             notfinished
         }
 
@@ -237,7 +237,9 @@ namespace TTT_AlphaBeta
                     string[,] boardCopy = CopyBoard(boardTextArray);
                     boardCopy[r, c] = AISymbol;
 
+
                     int score = AlphaBetaPrune(boardCopy, 9, false,int.MinValue,int.MaxValue);
+                    Debug.Log(score);
 
                     if (score > bestScore)
                     {
@@ -259,6 +261,7 @@ namespace TTT_AlphaBeta
 
             if (winState != WINSTATE.notfinished)
             {
+                Debug.Log(winState+" "+depth);
                 return (int)winState * depth;
             }
             else

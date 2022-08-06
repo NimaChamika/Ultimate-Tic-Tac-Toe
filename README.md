@@ -12,10 +12,19 @@
 ## 2. Tic Tac Toe (Alpha Beta Prune)
 
 
-## 3. Ultimate Tic Tac Toe
+## 3. Tic Tac Toe (MCTS)
+
+- is a heuristic search algorithm for some kinds of decision processes, most notably those employed in software that plays board games. In that context MCTS is used to solve the game tree.
+- Phases :
+    1. Selection
+    2. Expansion
+    3. Simulation (Rollout)
+    4. Backpropagation
+
+## 4. Ultimate Tic Tac Toe
 
 
-## 4. References 
+## 5. References 
 
 - https://en.wikipedia.org/wiki/Minimax
 - https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning
